@@ -14,6 +14,17 @@
 
 스킬 간 트리거 중복·충돌은 없다. docx와 gyeseong-korean-qa가 같은 문서에서 함께 뜰 수 있으나 역할이 다르다(파일 조작 vs 내용 검수).
 
+## 신규 스킬 2종 — 세션 78개 분석 기반 (같은 날 후속)
+
+지난 세션의 반복 작업 패턴에서 추출해 새로 만든 스킬. 규칙은 academy-manager 코드베이스의 실제 출제 엔진·리포트 엔진에서 뽑았다(앱과 손작업이 같은 기준을 쓰도록).
+
+| 스킬 | 내용 | 출처 |
+|---|---|---|
+| **korean-exam-writer** | 국어 문제 출제 기준 — 5지선다 기본형, 매력적 오답 금지 철학, 정형 발문 화이트리스트, 오답 설계 6종+10패턴, 보기 작성 5종, 해설 "정답 : ③"+통합 서술, 표기 규약·금지 표현, 풀세트 구성(문학 5·7/비문학 5/문법 3), 난이도 5단계 | koreanQuestionPrompts.js·koreanQuestionExplanation.js·koreanQuestionLocalRules.js·questionGen.js |
+| **student-report** | 학생 분석·보고서 작성 기준 — 데이터 기반 9원칙(구체 수치 근거·관통 스토리·밀도·반복 금지·처방은 빈도/시간/분량), 청자 4종(학부모/학생/강사/원장) 톤·안전선, 보고서 유형 4종 형식(종합 보고서·질문 분석 진단·주간 진단·운영 브리핑), 금지 목록(타 학생 비교·진단명·AI 표기 등) | reports.js(r5 프롬프트)·weeklyStudentDiagnosis.js·weeklyReportGenerator.js·questions.js 진단·tone-guide |
+
+주의: `<보기>` 인물 이름용 실제 학생 명단은 개인정보라 스킬에 넣지 않았다(공개 저장소). 앱 출제 설정의 화이트리스트를 참조하도록 지침만 두었다.
+
 ## korean-naesin-qa — 학교 무관 일반화 (같은 날 후속)
 
 계성고 전용 스킬을 대체하는 새 스킬. `skills/korean-naesin-qa/`에 보관한다(버전 관리용).
@@ -36,6 +47,6 @@
 
 ## 계정에 반영하는 법
 
-1. 세션에서 전달한 `korean-naesin-qa.skill` 파일의 **저장(Save skill)** 버튼으로 설치한다.
-2. 설정 → 기능(스킬)에서 기존 `gyeseong-korean-qa`를 삭제한다(새 스킬이 완전히 대체).
+1. 세션에서 전달한 `.skill` 파일 3종(`korean-naesin-qa` · `korean-exam-writer` · `student-report`)을 각각 **저장(Save skill)** 버튼으로 설치한다.
+2. 설정 → 기능(스킬)에서 기존 `gyeseong-korean-qa`를 삭제한다(korean-naesin-qa가 완전히 대체).
 3. morning 등 비활성화는 같은 화면에서 토글한다.
