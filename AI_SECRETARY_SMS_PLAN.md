@@ -277,3 +277,14 @@ CREATE TABLE IF NOT EXISTS ai_assistant_messages (
 2. **발송 방식 확인:** 기본은 **대화형 요청 → 우측 검수 워크벤치 확인 → `[발송 확정]`(즉시 또는 예약)**으로 동작하며, *"초안만 매주 금요일에 미리 만들어두기"* 같은 선택 루틴도 기본 체크 해제(OFF) 상태로 제공.
 3. **Solapi 발신번호 · 크레딧 확인:** 이미 연동된 Solapi(`SOLAPI_API_KEY` / `SOLAPI_SENDER`)를 그대로 사용하며, 카톡 등으로 따로 보낼 학생을 위해 카드마다 원클릭 `[복사]` 버튼도 함께 제공.
 
+---
+
+## 10. 전 단계 구현 및 실 PostgreSQL 16 · E2E · 브라우저 검증 완료 보고
+
+| 검증 항목 | 검증 대상 파일 / 명령 | 결과 |
+|---|---|---|
+| **DB 마이그레이션 & RLS 멱등성** | `server/db/migrations/032_ai_secretary_sms_and_learning_mode.sql` (`psql` 2회 연속 적용 + `pg_tables.rowsecurity`) | **7개 신규 테이블 전부 `rowsecurity = t` · 멱등 통과** |
+| **영상 수강생 분류 & 기본 제외(Opt-in OFF)** | `server/utils/studentMode.js`, `server/routes/admin.js`, `server/routes/attendance.js`, `server/routes/homework.js`, `server/routes/automation.js`, `server/services/automation.js` | **출결·숙제·결석 자동화·문자 출결 언급 기본 제외 및 `is_active: false` 검증 통과** |
+| **연속 맞춤 문자 & 0ms 7대 안전 가드** | `server/utils/secretary/smsSafetyGuard.js`, `voiceProfile.js`, `studentDelta.js`, `smsDrafter.js`, `server/routes/aiAssistant.js` | **직전 문자(`last_promised_action`) 연속 연결 · 타 학생 이름 혼입 자동 체크 해제 · `'AI'` 금지어 차단 통과** |
+| **White & Deep Navy 3단 워크스페이스 UX/UI** | `client/src/pages/admin/AIAssistant.jsx`, `client/src/components/FloatingAIChat.jsx`, `client/src/components/secretary/SmsBatchWorkbench.jsx`, `VoiceProfileModal.jsx` | **ESLint 8개 JSX 파일 0 에러 · Headless Chrome DOM 렌더링 검증 통과** |
+| **통합 테스트 & 멀티테넌트 쿼리 감사** | `npm run test:qna` (22/22), `npm run test:qna:e2e` (5/5), `npm run test:secretary` (3/3), `npm run audit:queries` | **총 30개 단위·실 DB E2E 테스트 100% PASS · 테넌트 격리 위반 0건** |
