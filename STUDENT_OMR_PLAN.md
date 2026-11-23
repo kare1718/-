@@ -337,6 +337,22 @@ ALTER TABLE scores
   - **`1차 점수 75점 → 최종 점수 90점 (+15점 상승!)`** 요약 배너 표시.
   - 전체 문항에 대해 `내 1차 답 → 재제출 답` 및 **실제 정답 번호** 전체 공개.
 
+#### 4.4 학생 페이지 간 자연스러운 연결 & 최초 접속 업데이트 안내·사용법 가이드 (`MyPage.jsx`, `StudentOmrGuideModal.jsx`)
+- **학생 메인 홈(`MyPage.jsx` — `/student`)에서 1클릭 연결**:
+  - 학생이 로그인 후 처음 도달하는 홈 화면 상단에 **`[✏️ OMR 카드 직접 입력 & 채점 NEW]`** 바로가기 카드를 배치.
+  - 현재 응시 가능하거나(`not_started`), 응시 중이거나(`in_progress`), 재제출 대기 중(`cooldown`), 오답 재도전 가능(`retry_available`)한 시험이 있으면 홈 화면 카드 안에 즉시 리스트업하고, 클릭 시 `/student/scores?omrExamId={id}&start=1` 딥링크로 넘어가 **해당 시험의 OMR 마킹 시트(또는 1차 결과 카드)가 자동으로 열리도록 연결**.
+  - 홈 화면 하단 `📊 최근 성적 · OMR` 요약 표에도 `1차 75점 → 90점` 이원 성적을 표시하고 클릭 시 성적·OMR 화면으로 이동.
+- **내비게이션 직관화 (`BottomTabBar.jsx`, `SideNav.jsx`, `StudySubNav.jsx`, `App.jsx`)**:
+  - 하단 탭바·사이드 메뉴·상단 서브탭 명칭을 기존 `성적`에서 **`성적·OMR`** (`성적 · OMR 입력`)으로 변경하고 `/student/omr` 라우트 별칭 추가.
+- **최초 접속 시 업데이트 안내 및 4단계 사용법 가이드 모달 (`StudentOmrGuideModal.jsx`)**:
+  - 학생이 업데이트 이후 `/student`(홈) 또는 `/student/scores`(성적·OMR)에 **최초 접속 시 자동으로 1회 팝업**(`localStorage`의 `student_omr_update_guide_v1_2026_11_{userId}` 키로 학생별 최초 열람 여부 관리).
+  - 4단계 시각적 슬라이드 구성:
+    1. **✨ NEW 업데이트 안내**: 홈 화면 및 `[성적·OMR]` 탭에서 직접 OMR 마킹·즉시 채점 가능 안내
+    2. **⏱ STEP 1 (시험 응시 & 타이머)**: 제한 시간 카운트다운, 실시간 자동 임시 저장, 시간 종료 시 자동 제출 안내
+    3. **⏳ STEP 2 (1차 결과 & 재제출 쿨타임)**: 1차 제출 직후 점수·`O`/`X`만 공개(정답 번호는 `🔒` 비공개) 및 재제출 대기 시간 동안 오답 복습 안내
+    4. **🔄 STEP 3 (오답 재도전 & 성적 기록)**: 맞힌 문항은 `⭕ 정답 잠금` 유지 + 틀린 문항만 재마킹, 성적표에 `1차 점수 → 재제출 점수` 모두 기록 및 최종 완료 후 정답 공개 안내
+  - 홈 화면과 성적·OMR 화면 상단에 **`[❓ OMR 사용법 안내]`** 버튼을 상시 제공하여 학생이 언제든 가이드를 다시 열어볼 수 있게 지원.
+
 ---
 
 ### Phase 5 — 검증 및 엣지 케이스 방어 (0.5일)
@@ -347,8 +363,8 @@ ALTER TABLE scores
 | **응시 중 새로고침·앱 종료로 타이머 초기화 시도** | 타이머 시작 시각(`started_at`)을 서버 DB에 기록하므로 새로고침해도 남은 시간이 그대로 유지됨. 마킹 중인 답안은 `localStorage` + 서버 `draft_answers`에 자동 저장되어 그대로 복구 |
 | **쿨타임 중에 시계를 앞으로 돌려 재제출 시도** | 프론트 카운트다운과 별개로 서버 `POST /submit-answers`에서 DB의 `submitted_at`과 서버 `NOW()`를 비교하여 쿨타임 미경과 시 `429`로 차단 |
 | **재제출 시 1차에 맞힌 문제를 실수로 건드려 감점** | `wrong_only` 모드에서는 UI에서 맞힌 문항 버블을 잠금(`disabled`) 처리하고, 서버 채점 시에도 1차 정답 문항은 기존 정답 답안을 강제 유지 |
-| **관리자가 뒤늦게 정답키의 오타를 수정한 경우** | 관리자가 정답키를 수정 저장할 때 `"기존 제출된 N명의 답안을 새 정답키로 자동 재채점할까요?"` 옵션을 제공하여 1차·재제출 점수와 등수를 일괄 재계산 (`POST /scores/exams/:examId/regrade-all`) |
-| **타이머 종료 시점에 학생이 화면을 닫아둔 경우** | 재접속 시 또는 서버 조회 시 `NOW() > started_at + time_limit`이고 `draft_answers`가 있으면 자동 제출 처리, 답안이 전혀 없으면 시간 초과 안내 후 관리자 재응시 허용 또는 0점/미제출 처리 |
+| **관리자가 뒤늦게 정답키의 오타를 수정한 경우** | 관리자가 정답키를 수정 저장할 때 `"기존 제출자 일괄 재채점"` 버튼을 제공하여 1차·재제출 점수와 등수를 일괄 재계산 (`POST /scores/exams/:examId/regrade-all`) |
+| **타이머 종료 시점에 학생이 화면을 닫아둔 경우** | 재접속 시 또는 타이머 만료 시 현재까지 마킹된 `draftAnswers`로 자동 제출 실행 |
 
 ---
 
@@ -358,9 +374,11 @@ ALTER TABLE scores
 |---|---|---|
 | **DB 마이그레이션** | `server/db/migrations/031_student_omr_system.sql` | `exam_answer_keys`, `student_answers`, `student_answer_attempts` 생성/확장 및 `scores`(`first_score`, `retest_score`) 컬럼 추가 |
 | **백엔드 라우트** | `server/routes/scores.js` | 정답키 보안 패치(`requireAdmin`), OMR 세팅 저장, 학생용 `GET /student/omr-exams`, `POST /exams/:id/start-omr`, `PUT /exams/:id/draft-answers`, `POST /exams/:id/submit-answers`(타이머·쿨타임·오답잠금·1차/재제출 이중 기록·정답 마스킹), `POST /exams/:id/reset-cooldown`, `POST /exams/:id/regrade-all` |
-| **프론트 쿼리 훅** | `client/src/hooks/queries/useScores.js` | `useStudentOmrExams`, `useStartOmr`, `useSubmitOmrAnswers` 훅 추가 및 캐시 무효화 연동 |
+| **프론트 쿼리 훅** | `client/src/hooks/queries/useScores.js` | `useStudentOmrExams`, `useStartOmr`, `useSaveOmrDraft`, `useSubmitOmrAnswers`, `useFinalizeOmrSubmission` 훅 추가 및 캐시 무효화 연동 |
 | **관리자 화면** | `client/src/pages/admin/ScoreInput.jsx` | `정답키 설정` 탭에 학생 OMR 오픈 토글·응시 제한시간(분)·재제출 쿨타임(분)·최대 횟수·재제출 방식·정답 공개 시점 설정 UI 추가, `OMR 입력` 탭에 1차/재제출 점수 비교 및 쿨타임 초기화 버튼 추가 |
-| **학생 화면** | `client/src/pages/student/ScoreView.jsx` | 상단 `OMR 답안 입력` 섹션, 응시 타이머 카운트다운, 5문항 구분 모바일 OMR 버블 시트, 오답 전용 재마킹(맞힌 문항 잠금) UI, 재제출 쿨타임 실시간 카운트다운, 1차 vs 재제출 성적표 및 정오표 뷰어 구현 |
+| **학생 성적·OMR 화면** | `client/src/pages/student/ScoreView.jsx` | 상단 `OMR 카드 직접 입력` 섹션, 딥링크(`?omrExamId=...&start=1`) 자동 시작, 응시 타이머 카운트다운, 5문항 구분 모바일 OMR 버블 시트, 오답 전용 재마킹(맞힌 문항 잠금) UI, 재제출 쿨타임 실시간 카운트다운, 1차 vs 재제출 성적표 및 정오표 뷰어 구현 |
+| **학생 홈 & 내비게이션** | `client/src/pages/student/MyPage.jsx`, `BottomTabBar.jsx`, `SideNav.jsx`, `StudySubNav.jsx`, `App.jsx` | 학생 홈 화면에 진행 중인 OMR 시험 알림 및 1클릭 응시 바로가기 카드 추가, 탭 명칭 `성적·OMR` 업데이트, `/student/omr` 라우트 연결 |
+| **최초 접속 안내 모달** | `client/src/components/StudentOmrGuideModal.jsx` | 학생 최초 접속 시 자동 노출되는 **NEW 업데이트 안내 & 4단계 OMR 사용법 가이드 모달** 및 상시 다시보기 버튼 제공 |
 
 ---
 
@@ -369,4 +387,5 @@ ALTER TABLE scores
 실작업 **3.5 ~ 4.5일** (단일 개발 기준):
 - **Phase 1~2 (1.5~2일):** DB 마이그레이션(`031_student_omr_system.sql`) + 서버 API(타이머·쿨타임·정답 마스킹·오답 잠금·1차/재제출 이중 저장·일괄 재채점).
 - **Phase 3 (1일):** 관리자 `ScoreInput.jsx` 정답키 & OMR 세부 설정 UI + 제출 현황(1차→재제출 비교, 쿨타임 해제).
-- **Phase 4~5 (1~1.5일):** 학생 `ScoreView.jsx` OMR 응시/타이머/쿨타임/오답 재도전 UI + 엣지 케이스 검증.
+- **Phase 4~5 (1~1.5일):** 학생 `ScoreView.jsx` · `MyPage.jsx` · `StudentOmrGuideModal.jsx` OMR 응시/타이머/쿨타임/오답 재도전/최초 접속 가이드 UI + 엣지 케이스 검증.
+
