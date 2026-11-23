@@ -327,18 +327,20 @@ ALTER TABLE scores
 - **제출 확인 & 자동 임시 저장**:
   - 마킹할 때마다 `localStorage` + 서버 `draft_answers`에 자동 저장, 미마킹 문항 존재 시 번호 안내 확인 창, 타이머 `00:00` 도달 시 자동 제출.
 
-#### 4.3 제출 직후 결과 카드 — 빠른 정답 & 정답과 해설 (`StudentOmrResult.jsx`)
+#### 4.3 제출 직후 결과 카드 — 빠른 정답 & 정답과 해설 연동 (`StudentOmrResult.jsx`)
+- **디자인 원칙**: 왼쪽 세로 강조선(`border-left` 컬러 스트라이프)을 배제하고, 균일한 1px 테두리(`#DCE2EC`)와 저채도 상태 배지(`정답` 세이지 / `오답` 브릭)로만 정돈.
 - **상단: 점수 요약 바** (`1차 75점 → 재제출 90점 / 100점 (+15점)` 또는 단일 점수, 정답 개수, 저채도 진행 바)
 - **중단: 빠른 정답 (클릭 이동형 그리드)**:
-  - 전체 문항(`01` ~ `N`)을 한눈에 보는 5문항 단위 빠른 정답 카드 그리드.
-  - **문항 클릭 시 하단 `정답과 해설`의 해당 문항 카드로 부드럽게 스크롤 이동**하며 딥 네이비(`#102044`) 포커스 링으로 강조 표시(`틀린 문항만` 필터 중 맞힌 문항을 눌러도 자동으로 전체 필터로 전환해 이동 보장).
+  - 전체 문항(`01` ~ `N`)을 한눈에 보는 빠른 정답 카드 그리드(정오 `O/X`, 정답 번호, 오답 시 내 답 취소선, 해설지 쪽수 표시).
+  - **문항 클릭 시 하단 `정답과 해설` 영역으로 부드럽게 스크롤 이동**하며 선택한 문항 포커스 바(`04번 · 오답 · 정답 ② · 내 답 ⑤ · 해설지 2쪽` + `← 이전` / `다음 →` + `↑ 빠른 정답`)를 갱신하고, PDF/Google Drive 뷰어의 해당 쪽수(`#page=N`) 또는 개별 문항 해설 파일로 즉시 연결.
   - 재제출 전(`canRevealAnswers === false`)에는 `내 답`과 `O/X`만 표시하고 정답은 `비공개`로 마스킹.
-- **하단: 정답과 해설**:
-  - **최종 완료 후 (정답 공개 시)**: 문항별 정답·내 답(`1차 답 → 재제출 답`)·배점·상세 해설을 Paperlogy/KoPub 돋움 기출 해설지 레이아웃으로 표시. 상단 `전체` / `틀린 문항` / `해설 있음` 필터 및 각 카드의 **`↑ 빠른 정답`** 원클릭 복귀 버튼 제공.
-  - **재제출 대기 중 (1차 제출 직후)**: 베끼기 방지를 위해 서버에서 정답 번호와 해설 본문을 모두 `null`로 마스킹하고, UI에는 비공개 안내 카드(등록된 해설 개수만 표시) 노출.
-- **관리자 해설 입력 지원 (`ScoreInput.jsx`)**:
-  - 정답키 설정 탭의 빠른 정답 마킹 아래에 **`문항별 정답과 해설 입력`** 패널 제공.
-  - 문항 번호 클릭 시 해당 문항 해설 입력란으로 즉시 이동하며, 한글/워드/PDF 해설지를 그대로 붙여넣어 `1. ...` / `2번 ...` / `[3번] ...` 형식으로 자동 분리 입력하는 **`해설 일괄 붙여넣기`** 기능 지원.
+- **하단: 정답과 해설 (Google Drive · 네이버 MYBOX / N드라이브 연동)**:
+  - **Google Drive / Google 문서 / PDF 직접 링크**: 공유 URL에서 `fileId`를 자동 추출해 앱 내 미리보기 뷰어(`iframe` + `#page=N`)로 바로 표시하며 **`새 창에서 열기 ↗`** 버튼 함께 제공.
+  - **네이버 MYBOX (구 N드라이브)**: 공유 링크를 자동 감지해 `네이버 MYBOX (N드라이브)` 배지, 파일명, 선택한 문항의 쪽수 안내 및 **`네이버 MYBOX에서 정답·해설 열기 ↗`** 버튼 제공(필요 시 화면 내 열기 시도 토글 포함).
+  - **재제출 대기 중 (1차 제출 직후)**: 베끼기 방지를 위해 서버에서 정답 번호·해설 본문·**구글 드라이브/MYBOX 해설 파일 URL까지 모두 `null`로 마스킹**, 최종 완료 후 자동 공개.
+- **관리자 해설 파일 연동 (`ScoreInput.jsx`)**:
+  - 정답키 설정 탭의 빠른 정답 마킹 아래에 **`정답과 해설 파일 연동 (Google Drive · 네이버 MYBOX / N드라이브)`** 패널 제공.
+  - 공유 링크 붙여넣기 시 출처(`Google Drive` / `네이버 MYBOX (N드라이브)` / `PDF`)를 자동 인식하고, 선택적으로 **해설지 쪽수 일괄 배정(`1-5:1, 6-10:2`)**, 문항별 개별 구글/MYBOX 링크, 짧은 핵심 메모를 연결 가능.
 
 #### 4.4 학생 페이지 간 자연스러운 연결 & 최초 접속 업데이트 안내·사용법 가이드 (`MyPage.jsx`, `StudentOmrGuideModal.jsx`)
 - **학생 메인 홈(`MyPage.jsx` — `/student`)에서 1클릭 연결**:
@@ -353,7 +355,7 @@ ALTER TABLE scores
     1. **업데이트 안내**: 홈 화면 및 `[성적·OMR]` 탭에서 직접 OMR 마킹·즉시 채점 가능 안내
     2. **STEP 1 (시험 응시 & 타이머)**: 제한 시간 카운트다운, 실시간 자동 임시 저장, 시간 종료 시 자동 제출 안내
     3. **STEP 2 (1차 결과 & 재제출 쿨타임)**: 1차 제출 직후 점수·`O`/`X`만 공개(정답·해설 비공개) 및 재제출 대기 시간 동안 오답 복습 안내
-    4. **STEP 3 (오답 재도전 & 성적 기록)**: 맞힌 문항은 `정답 잠금` 유지 + 틀린 문항만 재마킹, 성적표에 `1차 점수 → 재제출 점수` 모두 기록 및 최종 완료 후 빠른 정답·해설 공개 안내
+    4. **STEP 3 (오답 재도전 & 성적 기록)**: 맞힌 문항은 `정답 잠금` 유지 + 틀린 문항만 재마킹, 성적표에 `1차 점수 → 재제출 점수` 모두 기록 및 최종 완료 후 빠른 정답·연동 해설지 공개 안내
   - 홈 화면과 성적·OMR 화면 상단에 **`OMR 사용법 안내`** 버튼을 상시 제공하여 학생이 언제든 가이드를 다시 열어볼 수 있게 지원.
 
 ---
@@ -362,7 +364,7 @@ ALTER TABLE scores
 
 | 엣지 케이스 / 리스크 | 방어 설계 |
 |---|---|
-| **학생이 개발자 도구(Network 탭)로 정답·해설 확인 시도** | `GET /answer-key`는 관리자 전용(`requireAdmin`)으로 잠그고, 학생용 API(`omr-exams`, `submit-answers`, `my-submission`)는 `canRevealAnswers === false`일 때 서버에서 정답 번호와 해설 본문을 아예 내려주지 않음 (`correct: null`, `explanation: null`) |
+| **학생이 개발자 도구(Network 탭)로 정답·해설 링크 확인 시도** | `GET /answer-key`는 관리자 전용(`requireAdmin`)으로 잠그고, 학생용 API(`omr-exams`, `submit-answers`, `my-submission`)는 `canRevealAnswers === false`일 때 서버에서 정답 번호·해설·**연동 파일 URL(`explanationFile`, `explanationUrl`)을 모두 `null`로 마스킹** |
 | **응시 중 새로고침·앱 종료로 타이머 초기화 시도** | 타이머 시작 시각(`started_at`)을 서버 DB에 기록하므로 새로고침해도 남은 시간이 그대로 유지됨. 마킹 중인 답안은 `localStorage` + 서버 `draft_answers`에 자동 저장되어 그대로 복구 |
 | **쿨타임 중에 시계를 앞으로 돌려 재제출 시도** | 프론트 카운트다운과 별개로 서버 `POST /submit-answers`에서 DB의 `submitted_at`과 서버 `NOW()`를 비교하여 쿨타임 미경과 시 `429`로 차단 |
 | **재제출 시 1차에 맞힌 문제를 실수로 건드려 감점** | `wrong_only` 모드에서는 UI에서 맞힌 문항 버블을 잠금(`disabled`) 처리하고, 서버 채점 시에도 1차 정답 문항은 기존 정답 답안을 강제 유지 |
@@ -376,11 +378,12 @@ ALTER TABLE scores
 | 구분 | 파일 경로 | 주요 변경 내용 |
 |---|---|---|
 | **DB 마이그레이션** | `server/db/migrations/031_student_omr_system.sql` | `exam_answer_keys`, `student_answers`, `student_answer_attempts` 생성/확장 및 `scores`(`first_score`, `retest_score`) 컬럼 추가 |
-| **백엔드 라우트** | `server/routes/scores.js` | 정답키 보안 패치(`requireAdmin`), OMR 세팅·문항별 해설 저장, 학생용 `GET /student/omr-exams`, `POST /exams/:id/start-omr`, `PUT /exams/:id/draft-answers`, `POST /exams/:id/submit-answers`(타이머·쿨타임·오답잠금·1차/재제출 이중 기록·정답/해설 서버 마스킹), `POST /exams/:id/reset-cooldown`, `POST /exams/:id/regrade-all` |
+| **백엔드 라우트** | `server/routes/scores.js` | 정답키 보안 패치(`requireAdmin`), OMR 세팅·해설 파일 URL 검증(`http/https`)·저장, 학생용 `GET /student/omr-exams`, `POST /exams/:id/start-omr`, `PUT /exams/:id/draft-answers`, `POST /exams/:id/submit-answers`(타이머·쿨타임·오답잠금·1차/재제출 이중 기록·정답/해설 파일 URL 서버 마스킹), `POST /exams/:id/reset-cooldown`, `POST /exams/:id/regrade-all` |
+| **해설 파일 유틸** | `client/src/lib/explanationFile.js` | Google Drive(`fileId` 자동 추출 `/preview`), Google 문서, 네이버 MYBOX(N드라이브), PDF/이미지 URL 파싱 및 XSS 방지 검증 |
 | **프론트 쿼리 훅** | `client/src/hooks/queries/useScores.js` | `useStudentOmrExams`, `useStartOmr`, `useSaveOmrDraft`, `useSubmitOmrAnswers`, `useFinalizeOmrSubmission` 훅 추가 및 캐시 무효화 연동 |
-| **관리자 화면** | `client/src/pages/admin/ScoreInput.jsx` | `정답키 설정` 탭에 학생 OMR 오픈 토글·응시 제한시간·재제출 쿨타임·최대 횟수·재제출 방식·정답 공개 시점 설정 + **문항별 해설 입력 및 일괄 붙여넣기 자동 분리**, `OMR 입력` 탭에 1차/재제출 점수 비교 및 쿨타임 초기화 버튼 추가 |
+| **관리자 화면** | `client/src/pages/admin/ScoreInput.jsx` | `정답키 설정` 탭에 학생 OMR 오픈 토글·응시 제한시간·재제출 쿨타임·최대 횟수·재제출 방식·정답 공개 시점 설정 + **Google Drive / 네이버 MYBOX(N드라이브) 해설 파일 연동 및 문항별 쪽수 일괄 배정(`1-5:1, 6-10:2`)**, `OMR 입력` 탭에 1차/재제출 점수 비교 및 쿨타임 초기화 버튼 추가 |
 | **OMR 마킹 시트** | `client/src/components/StudentOmrSheet.jsx` | Paperlogy/KoPub 돋움 폰트 적용, 화이트·딥 네이비(`#102044`) 저채도 테마, 고정 타이머 헤더, 빠른 문항 점프 미니맵, 5문항 단위 블록 카드, 세로 타원형 먹색(`#141D30`) 마킹 버블, 저채도 세이지 정답 잠금·브릭 1차 오답 취소선 |
-| **빠른 정답 & 해설** | `client/src/components/StudentOmrResult.jsx` | 상단 점수 요약, 중단 클릭형 **빠른 정답** 그리드(문항 클릭 시 하단 해설 카드로 부드럽게 이동 및 포커스 강조), 하단 **정답과 해설**(전체/틀린 문항/해설 있음 필터 + `↑ 빠른 정답` 복귀 버튼 + 재제출 전 비공개 잠금) |
+| **빠른 정답 & 해설** | `client/src/components/StudentOmrResult.jsx` | 왼쪽 선 없는 균일 1px 카드, 상단 점수 요약, 중단 클릭형 **빠른 정답** 그리드(문항 클릭 시 하단 해설지 쪽수·포커스 바로 자동 이동), 하단 **Google Drive 임베드 뷰어 / 네이버 MYBOX(N드라이브) 연동 카드** 및 `↑ 빠른 정답` 복귀 버튼 |
 | **학생 성적·OMR 화면** | `client/src/pages/student/ScoreView.jsx` | 상단 `OMR 카드 직접 입력` 섹션, 딥링크(`?omrExamId=...&start=1`) 자동 시작, `StudentOmrSheet` 및 `StudentOmrResult` 연동, 재제출 쿨타임 실시간 카운트다운 |
 | **학생 홈 & 내비게이션** | `client/src/pages/student/MyPage.jsx`, `BottomTabBar.jsx`, `SideNav.jsx`, `StudySubNav.jsx`, `App.jsx` | 학생 홈 화면에 진행 중인 OMR 시험 알림 및 1클릭 응시 바로가기 카드 추가, 탭 명칭 `성적·OMR` 업데이트, `/student/omr` 라우트 연결 |
 | **최초 접속 안내 모달** | `client/src/components/StudentOmrGuideModal.jsx` | 학생 최초 접속 시 자동 노출되는 **업데이트 안내 & 4단계 OMR 사용법 가이드 모달** 및 상시 다시보기 버튼 제공 |
