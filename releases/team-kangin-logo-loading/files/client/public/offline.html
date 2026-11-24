@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>팀 강인 — TEAM KANG:IN</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif;
+      background: #F2F4F6;
+      color: #191F28;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+    }
+    .card {
+      width: 100%;
+      max-width: 360px;
+      background: #FFFFFF;
+      border-radius: 22px;
+      padding: 36px 24px 28px;
+      text-align: center;
+    }
+    .logo {
+      height: 52px;
+      width: auto;
+      margin: 0 auto 20px;
+      display: block;
+    }
+    h1 {
+      font-size: 19px;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      margin-bottom: 8px;
+    }
+    p {
+      font-size: 14px;
+      color: #6B7684;
+      line-height: 1.6;
+    }
+    button {
+      margin-top: 24px;
+      width: 100%;
+      padding: 14px 20px;
+      background: #3182F6;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 14px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:active { transform: scale(0.98); }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0B1424; color: #F8FAFC; }
+      .card { background: #132036; }
+      p { color: #94A3B8; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img class="logo" src="/brand/team-kangin-light.png" alt="TEAM KANG:IN" />
+    <h1>인터넷 연결이 잠시 끊어졌어요</h1>
+    <p>네트워크 상태를 확인한 뒤<br />다시 시도해 주세요.</p>
+    <button onclick="location.reload()">다시 시도하기</button>
+  </div>
+</body>
+</html>
