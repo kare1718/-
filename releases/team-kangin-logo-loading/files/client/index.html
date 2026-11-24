@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="google" content="notranslate" />
+    <meta http-equiv="Content-Language" content="ko" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="혼자 하지 않는 국어, 끝까지 함께 — 강인한 국어 공식 학습 플랫폼 팀 강인(TEAM KANG:IN)." />
+    <meta name="keywords" content="강인한 국어, 팀 강인, TEAM KANG:IN, 국어 학원, 모의고사 OMR, AI 국어 질문" />
+    <meta name="author" content="팀 강인 (강인한국어연구소)" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="팀 강인 — TEAM KANG:IN" />
+    <meta property="og:description" content="혼자 하지 않는 국어, 끝까지 함께 — 강인한 국어 공식 학습 플랫폼" />
+    <meta property="og:locale" content="ko_KR" />
+    <meta property="og:site_name" content="팀 강인" />
+    <meta property="og:image" content="/icons/icon-512.png" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="팀 강인 — TEAM KANG:IN" />
+    <meta name="twitter:description" content="혼자 하지 않는 국어, 끝까지 함께 — 강인한 국어 공식 학습 플랫폼" />
+
+    <title>팀 강인 — TEAM KANG:IN</title>
+
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0B1933" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="팀강인" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="icon" type="image/png" href="/icons/icon-192.png" />
+    <link rel="preload" as="image" href="/brand/team-kangin-light.png" />
+    <link rel="preload" as="image" href="/brand/team-kangin-dark.png" />
+    <!-- 폰트는 /fonts 셀프호스팅 (Paperlogy + KoPub Dotum, index.css @font-face) -->
+    <!-- Material Symbols (Outlined) - 신버전 -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap" />
+    <!-- Material Icons (구버전, 레거시 클래스명 호환) -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('theme') || 'light';
+          if (t === 'dark' || t === 'light') document.documentElement.dataset.theme = t;
+        } catch (e) {}
+      })();
+    </script>
+    <style>
+      .material-symbols-outlined {
+        font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      }
+      /* 0ms 초기 스플래시 (React 마운트 즉시 자동 교체) */
+      #tk-initial-splash {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        background: #F2F4F6;
+        color: #191F28;
+        font-family: -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Pretendard', sans-serif;
+      }
+      #tk-initial-splash .tk-logo-dark { display: none; }
+      #tk-initial-splash .tk-logo-light { display: block; }
+      #tk-initial-splash img {
+        height: 60px;
+        width: auto;
+        object-fit: contain;
+        animation: tkFadeUp 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+      }
+      #tk-initial-splash .tk-sub {
+        font-size: 12px;
+        font-weight: 600;
+        color: #8B95A1;
+        letter-spacing: -0.01em;
+        margin-top: -10px;
+      }
+      #tk-initial-splash .tk-bar-track {
+        width: 132px;
+        height: 3.5px;
+        border-radius: 999px;
+        background: #E5E8EB;
+        overflow: hidden;
+        position: relative;
+      }
+      #tk-initial-splash .tk-bar-fill {
+        position: absolute;
+        inset: 0;
+        width: 44%;
+        border-radius: 999px;
+        background: #3182F6;
+        animation: tkSlide 1.15s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+      }
+      :root[data-theme="dark"] #tk-initial-splash {
+        background: #0B1424;
+        color: #F8FAFC;
+      }
+      :root[data-theme="dark"] #tk-initial-splash .tk-logo-light { display: none; }
+      :root[data-theme="dark"] #tk-initial-splash .tk-logo-dark { display: block; }
+      :root[data-theme="dark"] #tk-initial-splash .tk-sub { color: #8FA3BF; }
+      :root[data-theme="dark"] #tk-initial-splash .tk-bar-track { background: #1D2E4D; }
+      :root[data-theme="dark"] #tk-initial-splash .tk-bar-fill { background: #3B82F6; }
+      @keyframes tkFadeUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes tkSlide {
+        0% { transform: translateX(-110%); }
+        100% { transform: translateX(260%); }
+      }
+    </style>
+  </head>
+  <body class="notranslate" translate="no">
+    <div id="root">
+      <div id="tk-initial-splash" role="status" aria-label="팀 강인 불러오는 중">
+        <img class="tk-logo-light" src="/brand/team-kangin-light.png" alt="TEAM KANG:IN" />
+        <img class="tk-logo-dark" src="/brand/team-kangin-dark.png" alt="TEAM KANG:IN" />
+        <span class="tk-sub">by 강인한 국어</span>
+        <div class="tk-bar-track"><div class="tk-bar-fill"></div></div>
+      </div>
+    </div>
+    <script src="https://cdn.portone.io/v2/browser-sdk.js"></script>
+    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
+  </body>
+</html>
