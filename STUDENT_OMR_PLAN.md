@@ -373,27 +373,67 @@ ALTER TABLE scores
 
 ---
 
+### Phase 6 — 문항별 정답률 · 선지 분포 · 오답 분석 & 학생·조교 양방향 OMR CRUD (구현 완료)
+
+#### 6.1 문항별 정답률 · 선지별 선택률 · 오답 분석 체계
+- **1차 vs 최종(재제출) 통계 분리**:
+  - **1차 정답률(`firstCorrectRate`)**: 학생이 처음 풀었을 때의 원답안(`first_answers`) 기준으로 계산해 시험의 진짜 난이도를 보존.
+  - **최종 정답률(`latestCorrectRate`) & 오답 교정률(`correctionRate`)**: 재제출 이후 최종 답안(`answers`)과 비교해 1차 오답자가 재도전에서 얼마나 교정했는지 측정.
+  - **선지별 선택률(`choiceRates`: ①~⑤ %) & 최다 오답 선지(`topWrongChoice`)**: 함정 선지를 자동 추출하고, 응시자 10명 이상일 때 상·하위 27% 기준 **변별도(`discrimination`)** 산출.
+  - **난이도 구간(`difficultyTier`)**: 저채도 3단계(`high` <40% 브릭 / `medium` 40~69% 샌드 / `low` ≥70% 세이지) + 선택적 영역 태그(`독서`/`문학`/`문법` 등, 일괄 배정 `1-15:독서, 16-30:문학`).
+- **통계 신뢰도 & 베끼기 방지 마스킹**:
+  - `조교`·`선생님` 및 비학생(`role != 'student'`) 테스트 계정은 통계 모수에서 자동 제외.
+  - `exam_answer_keys`에 `stats_reveal_policy`(`after_final` 기본 / `rate_only_first` / `off`), `stats_basis`(`first` 기본 / `latest`), `min_stats_sample`(`5` 기본) 설정 추가.
+  - **서버 단 강제 마스킹**: `canRevealAnswers === false`(재제출 대기 중)일 때 정답 번호·해설 파일 URL뿐 아니라 **`choiceRates`와 `topWrongChoice`도 항상 `null`로 마스킹**해 최다 선택 선지로 정답을 추측하는 우회를 원천 차단. 표본 수 미달(`n < min_stats_sample`) 시에도 문항별 정답률을 비공개(`insufficientSample: true`).
+  - 시험별 30초 TTL 메모리 캐시(`examStatsCache`)를 두고 제출/수정/삭제/재채점/정답키 변경 시 즉시 무효화.
+- **학생 UI (`StudentOmrResult.jsx`)**:
+  - 상단 요약 바에 응시자 수·평균 점수와 클릭 이동형 인사이트 칩(**`실수 주의(70%↑ 오답)`** / **`고난도 정답(<40%)`**) 표시.
+  - `빠른 정답` 각 문항 셀에 정답률 % + 3px 저채도 미니 게이지 표시.
+  - 문항 클릭 시 하단 `정답과 해설` 포커스 바(및 문항 카드) 안에 **①~⑤ 선지별 선택률 분포 바**(`정답`·`내답`·`최다오답` 배지) 표시. (왼쪽 세로 강조선 없음, 균일 1px 테두리 유지)
+- **관리자·조교 분석 UI (`AdminOmrStatsPanel.jsx`, `ScoreInput.jsx`)**:
+  - **오답률 TOP 5 킬러 문항 우선순위 카드** + **1차/최종/비교 BarChart** + 영역별 평균 정답률 칩 + 문항별 선지 분포 표 + **오답 학생 명단 드릴다운** + 학교/학년 필터 연동(`GET /question-stats?school=&grade=`) + **엑셀(`.xlsx`) 내보내기**.
+
+#### 6.2 학생 & 조교(assistant) 양방향 OMR CRUD 권한 체계
+- **조교 RBAC 통합 (`server/middleware/auth.js`, `App.jsx`, `SideNav.jsx`, `ScoreView.jsx`)**:
+  - 기존 `requireAdmin`이 조교(`role === 'assistant'` / `school === '조교'` / `school === '선생님'`)의 OMR API 요청을 HTTP 403으로 차단하던 문제 해결 → **`requireStaff`** 미들웨어 도입 및 전 OMR CRUD·성적 입력·학생 목록(`/scores/students-list`) 라우트에 적용. (`DELETE /scores/exams/:id` 시험 자체 삭제만 관리자 전용 `requireAdmin` 유지)
+  - 프론트엔드 권한 판별도 `['admin', 'superadmin', 'assistant', 'teacher'].includes(user.role) || ['조교', '선생님'].includes(user.school)`로 통일.
+- **학생 CRUD (본인 답안)**:
+  - **Create**: `POST /exams/:examId/start-omr`, `POST /exams/:examId/submit-answers`
+  - **Read**: `GET /student/omr-exams`, `GET /exams/:examId/my-submission`
+  - **Update**: `PUT /exams/:examId/draft-answers`, 오답 재제출 `POST /exams/:examId/submit-answers`, `POST /exams/:examId/finalize-submission`
+  - **Delete (마킹 초기화)**: **`DELETE /exams/:examId/draft-answers`** (`StudentOmrSheet.jsx`의 `마킹 초기화` 버튼) — 진행 중인 마킹만 초기화하고 `started_at`(타이머)과 1차 정답 잠금 문항은 보존. 제출 완료 기록 삭제는 1차 점수 세탁 방지를 위해 직원(조교·관리자) 전용 유지.
+- **조교·관리자 CRUD (정답키 + 전체 학생 OMR)**:
+  - **정답키 CRUD**: `POST/GET/DELETE /exams/:examId/answer-key` (`requireStaff`)
+  - **학생 OMR 생성/일괄 입력**: `POST /exams/:examId/submit-answers-batch` + 개별 **`빠른 답안 문자열 입력(31425...)`**
+  - **학생 OMR 조회**: `GET /exams/:examId/submissions` (입력자 역할·이름 조인), `GET /exams/:examId/question-stats`
+  - **학생 OMR 개별 수정/재채점**: **`PUT /exams/:examId/submissions/:studentId`** (`updateMode: 'latest' | 'first'` 지원 — 기본 최신 답안 수정, 재제출 이력이 있는 경우 `1차 원답안 정정` 가능 + 등수 자동 재계산)
+  - **학생 OMR 제출 기록 삭제**: **`DELETE /exams/:examId/submissions/:studentId`** (`student_answers` + `student_answer_attempts` + 연동 `scores` 정리 + 등수 재계산)
+  - **충돌 방지 & 감사 추적**: 학생이 `in_progress`(응시 중)일 때 조교 화면에 덮어쓰기 경고 배너 및 확인창 표시, `last_updated_by_role` / `last_updated_by_user_id` / `submitted_by_user_id` 기록(`학생 직접` / `조교 입력(이름)` / `관리자 입력` 배지) 및 `audit_logs`(`logAction`) 자동 기록.
+
+---
+
 ## 5. 변경 대상 파일 요약 (`my-teaching-assistant`)
 
 | 구분 | 파일 경로 | 주요 변경 내용 |
 |---|---|---|
-| **DB 마이그레이션** | `server/db/migrations/031_student_omr_system.sql` | `exam_answer_keys`, `student_answers`, `student_answer_attempts` 생성/확장 및 `scores`(`first_score`, `retest_score`) 컬럼 추가 |
-| **백엔드 라우트** | `server/routes/scores.js` | 정답키 보안 패치(`requireAdmin`), OMR 세팅·해설 파일 URL 검증(`http/https`)·저장, 학생용 `GET /student/omr-exams`, `POST /exams/:id/start-omr`, `PUT /exams/:id/draft-answers`, `POST /exams/:id/submit-answers`(타이머·쿨타임·오답잠금·1차/재제출 이중 기록·정답/해설 파일 URL 서버 마스킹), `POST /exams/:id/reset-cooldown`, `POST /exams/:id/regrade-all` |
+| **DB 마이그레이션** | `server/db/migrations/031_student_omr_system.sql`, `032_omr_stats_and_staff_crud.sql` | `exam_answer_keys`(OMR 정책·통계 공개 정책/기준/최소표본), `student_answers`(이원 점수·작성자 추적 컬럼·집계 인덱스), `student_answer_attempts`(`submitted_by_user_id`), `scores`(`first_score`, `retest_score`) 생성/확장 |
+| **권한 미들웨어** | `server/middleware/auth.js` | `isStaffUser`, `requireStaff` 미들웨어 추가 (관리자·조교·선생님 통합 권한 허용) |
+| **백엔드 라우트** | `server/routes/scores.js` | OMR 전 라우트 `requireStaff` 전환(`DELETE /exams/:id`만 `requireAdmin`), `GET /students-list` 조교 지원, `DELETE /draft-answers`(학생 마킹 초기화), `PUT/DELETE /submissions/:studentId`(조교·관리자 개별 수정·삭제 + `audit_logs`), `computeExamQuestionStats`(1차/최종 정답률·선지 분포·변별도·오답 학생·30초 캐시) 및 `buildStudentQuestionStats`(베끼기 방지 서버 마스킹) |
 | **해설 파일 유틸** | `client/src/lib/explanationFile.js` | Google Drive(`fileId` 자동 추출 `/preview`), Google 문서, 네이버 MYBOX(N드라이브), PDF/이미지 URL 파싱 및 XSS 방지 검증 |
-| **프론트 쿼리 훅** | `client/src/hooks/queries/useScores.js` | `useStudentOmrExams`, `useStartOmr`, `useSaveOmrDraft`, `useSubmitOmrAnswers`, `useFinalizeOmrSubmission` 훅 추가 및 캐시 무효화 연동 |
-| **관리자 화면** | `client/src/pages/admin/ScoreInput.jsx` | `정답키 설정` 탭에 학생 OMR 오픈 토글·응시 제한시간·재제출 쿨타임·최대 횟수·재제출 방식·정답 공개 시점 설정 + **Google Drive / 네이버 MYBOX(N드라이브) 해설 파일 연동 및 문항별 쪽수 일괄 배정(`1-5:1, 6-10:2`)**, `OMR 입력` 탭에 1차/재제출 점수 비교 및 쿨타임 초기화 버튼 추가 |
-| **OMR 마킹 시트** | `client/src/components/StudentOmrSheet.jsx` | Paperlogy/KoPub 돋움 폰트 적용, 화이트·딥 네이비(`#102044`) 저채도 테마, 고정 타이머 헤더, 빠른 문항 점프 미니맵, 5문항 단위 블록 카드, 세로 타원형 먹색(`#141D30`) 마킹 버블, 저채도 세이지 정답 잠금·브릭 1차 오답 취소선 |
-| **빠른 정답 & 해설** | `client/src/components/StudentOmrResult.jsx` | 왼쪽 선 없는 균일 1px 카드, 상단 점수 요약, 중단 클릭형 **빠른 정답** 그리드(문항 클릭 시 하단 해설지 쪽수·포커스 바로 자동 이동), 하단 **Google Drive 임베드 뷰어 / 네이버 MYBOX(N드라이브) 연동 카드** 및 `↑ 빠른 정답` 복귀 버튼 |
-| **학생 성적·OMR 화면** | `client/src/pages/student/ScoreView.jsx` | 상단 `OMR 카드 직접 입력` 섹션, 딥링크(`?omrExamId=...&start=1`) 자동 시작, `StudentOmrSheet` 및 `StudentOmrResult` 연동, 재제출 쿨타임 실시간 카운트다운 |
-| **학생 홈 & 내비게이션** | `client/src/pages/student/MyPage.jsx`, `BottomTabBar.jsx`, `SideNav.jsx`, `StudySubNav.jsx`, `App.jsx` | 학생 홈 화면에 진행 중인 OMR 시험 알림 및 1클릭 응시 바로가기 카드 추가, 탭 명칭 `성적·OMR` 업데이트, `/student/omr` 라우트 연결 |
+| **프론트 쿼리 훅** | `client/src/hooks/queries/useScores.js` | `useStudentOmrExams`, `useStartOmr`, `useSaveOmrDraft`, `useResetOmrDraft`, `useSubmitOmrAnswers`, `useFinalizeOmrSubmission` 훅 추가 및 캐시 무효화 연동 |
+| **관리자·조교 분석 패널** | `client/src/components/AdminOmrStatsPanel.jsx` | 오답률 TOP 5 킬러 문항 카드, 1차/최종/비교 BarChart, 영역별 정답률 요약, 선지 분포·오답 학생 드릴다운 테이블, 엑셀(`.xlsx`) 내보내기 |
+| **관리자·조교 화면** | `client/src/pages/admin/ScoreInput.jsx` | `정답키 설정` 탭에 OMR 정책·통계 공개 설정·문항 영역 태그 일괄 배정·Google Drive/네이버 MYBOX 해설 연동 추가, `OMR 제출 현황 & 답안 관리` 탭에 `AdminOmrStatsPanel` 연동·학교/학년 필터 통계 재조회·작성자 배지(`학생 직접`/`조교 입력`/`관리자 입력`)·응시 중 충돌 경고·빠른 답안 문자열 입력·개별 수정/1차 정정/삭제 버튼 추가 |
+| **OMR 마킹 시트** | `client/src/components/StudentOmrSheet.jsx` | Paperlogy/KoPub 돋움 폰트 적용, 화이트·딥 네이비(`#102044`) 저채도 테마, 고정 타이머 헤더, 빠른 문항 점프 미니맵, 5문항 단위 블록 카드, 세로 타원형 먹색(`#141D30`) 마킹 버블, 저채도 세이지 정답 잠금·브릭 1차 오답 취소선, 하단 `마킹 초기화` 버튼 |
+| **빠른 정답 & 해설** | `client/src/components/StudentOmrResult.jsx` | 왼쪽 선 없는 균일 1px 카드, 상단 점수·응시자/평균·클릭형 인사이트 칩(`실수 주의`/`고난도 정답`), 중단 클릭형 **빠른 정답** 그리드(정답률 % + 3px 미니 게이지), 하단 선택 문항 포커스 바(**①~⑤ 선지별 선택률 분포 바**) + **Google Drive 임베드 뷰어 / 네이버 MYBOX(N드라이브) 연동 카드** |
+| **학생 성적·OMR 화면** | `client/src/pages/student/ScoreView.jsx` | 상단 `OMR 카드 직접 입력` 섹션, 딥링크(`?omrExamId=...&start=1`) 자동 시작, `StudentOmrSheet`(`onResetDraft`) 및 `StudentOmrResult`(`statsSummary`, `choiceCount`) 연동, 재제출 쿨타임 실시간 카운트다운 |
+| **학생 홈 & 내비게이션** | `client/src/pages/student/MyPage.jsx`, `BottomTabBar.jsx`, `SideNav.jsx`, `StudySubNav.jsx`, `App.jsx` | 학생 홈 화면 OMR 바로가기 카드, 탭 명칭 `성적·OMR` 업데이트, `/student/omr` 라우트 연결, 조교(`role === 'assistant'`) 라우트·사이드바 권한 통일 |
 | **최초 접속 안내 모달** | `client/src/components/StudentOmrGuideModal.jsx` | 학생 최초 접속 시 자동 노출되는 **업데이트 안내 & 4단계 OMR 사용법 가이드 모달** 및 상시 다시보기 버튼 제공 |
 
 ---
 
-## 6. 총 예상 공수
+## 6. 구현 진행 상태 요약
 
-실작업 **3.5 ~ 4.5일** (단일 개발 기준):
-- **Phase 1~2 (1.5~2일):** DB 마이그레이션(`031_student_omr_system.sql`) + 서버 API(타이머·쿨타임·정답 마스킹·오답 잠금·1차/재제출 이중 저장·일괄 재채점).
-- **Phase 3 (1일):** 관리자 `ScoreInput.jsx` 정답키 & OMR 세부 설정 UI + 제출 현황(1차→재제출 비교, 쿨타임 해제).
-- **Phase 4~5 (1~1.5일):** 학생 `ScoreView.jsx` · `MyPage.jsx` · `StudentOmrGuideModal.jsx` OMR 응시/타이머/쿨타임/오답 재도전/최초 접속 가이드 UI + 엣지 케이스 검증.
+- **Phase 1~5 (구현 및 빌드 검증 완료)**: DB 마이그레이션(`031_student_omr_system.sql`), 타이머·쿨타임·정답/해설 파일 URL 서버 마스킹·오답 잠금·1차/재제출 이중 저장, 화이트 & 딥 네이비 OMR 마킹 시트, 빠른 정답 & Google Drive/네이버 MYBOX 해설지 연동, 학생 홈 연결 및 최초 접속 가이드 모달.
+- **Phase 6 (구현 및 빌드·단위 검증 완료)**: DB 마이그레이션(`032_omr_stats_and_staff_crud.sql`), 문항별 1차/최종 정답률·선지별 선택률·변별도·오답 분석(`AdminOmrStatsPanel.jsx` + `StudentOmrResult.jsx`), `requireStaff` 기반 학생·조교 양방향 OMR CRUD 및 감사 로그(`audit_logs`) 연동.
+
 
